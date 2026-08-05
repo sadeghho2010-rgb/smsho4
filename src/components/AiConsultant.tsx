@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AppTheme } from '../types';
 import Markdown from 'react-markdown';
+import { GoogleGenAI } from '@google/genai';
 
 interface Message {
   role: 'user' | 'model';
@@ -53,6 +54,10 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
 
   const handleSend = async (text: string = input) => {
     if (!text.trim() || isLoading) return;
+    if (!apiKey) {
+      setShowKeyInput(true);
+      return;
+    }
 
     const userMessage: Message = { role: 'user', parts: [{ text }] };
     const newMessages = [...messages, userMessage];
@@ -61,22 +66,26 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: text,
-          history: messages,
-          apiKey: apiKey
-        }),
+      const genAI = new GoogleGenAI({ apiKey });
+      
+      const response = await genAI.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
+          ...messages.map(m => ({
+            role: m.role,
+            parts: [{ text: m.parts[0].text }]
+          })),
+          { role: 'user', parts: [{ text }] }
+        ]
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const responseText = response.text;
 
-      setMessages([...newMessages, { role: 'model', parts: [{ text: data.text }] }]);
+      setMessages([...newMessages, { role: 'model', parts: [{ text: responseText }] }]);
     } catch (error: any) {
-      setMessages([...newMessages, { role: 'model', parts: [{ text: `خطا: ${error.message}` }] }]);
+      console.error('Gemini API Error:', error);
+      setMessages([...newMessages, { role: 'model', parts: [{ text: `خطا در ارتباط با هوش مصنوعی: ${error.message || 'لطفاً از صحت کلید API اطمینان حاصل کنید.'}` }] }]);
     } finally {
       setIsLoading(false);
     }
