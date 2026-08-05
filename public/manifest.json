@@ -1,0 +1,16 @@
+{
+  "name": "نقشه راه",
+  "short_name": "نقشه راه",
+  "description": "سامانه مدیریت برنامه‌های جامع بلندمدت همراه با فلوچارت‌های سلسله‌مراتبی",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

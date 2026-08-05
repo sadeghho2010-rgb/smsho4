@@ -22,7 +22,6 @@ import { INITIAL_PROGRAMS } from './data/initialData';
 import Header from './components/Header';
 import Flowchart from './components/Flowchart';
 import ChallengesTracker from './components/ChallengesTracker';
-import Login from './components/Login';
 import MindMap from './components/MindMap';
 import DailyTodos from './components/DailyTodos';
 import Sidebar from './components/Sidebar';
@@ -43,7 +42,10 @@ const THEME_CLASSES: Record<AppTheme, string> = {
 
 export default function App() {
   // Auth State
-  const [currentUser, setCurrentUser] = useState<{ username: string; role: 'admin' | 'user' } | null>(null);
+  const [currentUser] = useState<{ username: string; role: 'admin' | 'user' }>({ 
+    username: 'کاربر', 
+    role: 'user' 
+  });
 
   // App Settings
   const [theme, setTheme] = useState<AppTheme>('cyber-gradient');
@@ -72,19 +74,8 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 1. Initial login restoration check from session
+  // 1. Initial restoration check
   useEffect(() => {
-    const savedUser = sessionStorage.getItem('roadmap_planner_user');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-      } catch {
-        // Clear corrupt state
-        sessionStorage.removeItem('roadmap_planner_user');
-      }
-    }
-
     const savedTheme = localStorage.getItem('roadmap_planner_theme') as AppTheme;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -96,36 +87,27 @@ export default function App() {
     }
   }, []);
 
-  // 2. Load user-specific data upon successful login
+  // 2. Load data
   useEffect(() => {
-    if (currentUser) {
-      const userPrograms = loadPrograms(currentUser.username);
-      setPrograms(userPrograms);
-      if (userPrograms.length > 0) {
-        setActiveProgramId(userPrograms[0].id);
-      } else {
-        setActiveProgramId('');
-      }
-
-      const userChallenges = loadChallenges(currentUser.username);
-      setChallenges(userChallenges);
-
-      const userTodos = loadTodos(currentUser.username);
-      setTodos(userTodos);
-
-      const userWeekly = loadWeeklyTasks(currentUser.username);
-      setWeeklyTasks(userWeekly);
-
-      const userEvents = loadEvents(currentUser.username);
-      setEvents(userEvents);
+    const userPrograms = loadPrograms(currentUser.username);
+    setPrograms(userPrograms);
+    if (userPrograms.length > 0) {
+      setActiveProgramId(userPrograms[0].id);
     } else {
-      setPrograms([]);
       setActiveProgramId('');
-      setChallenges([]);
-      setTodos([]);
-      setWeeklyTasks([]);
-      setEvents([]);
     }
+
+    const userChallenges = loadChallenges(currentUser.username);
+    setChallenges(userChallenges);
+
+    const userTodos = loadTodos(currentUser.username);
+    setTodos(userTodos);
+
+    const userWeekly = loadWeeklyTasks(currentUser.username);
+    setWeeklyTasks(userWeekly);
+
+    const userEvents = loadEvents(currentUser.username);
+    setEvents(userEvents);
   }, [currentUser]);
 
   // Automated Task Generation from Events
@@ -191,65 +173,43 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (currentUser) {
-      const result = refreshAutoTasks(todos, events);
-      if (result.changed) {
-        setTodos(result.updatedTodos);
-        saveTodos(result.updatedTodos, currentUser.username);
-      }
+    const result = refreshAutoTasks(todos, events);
+    if (result.changed) {
+      setTodos(result.updatedTodos);
+      saveTodos(result.updatedTodos, currentUser.username);
     }
   }, [events, currentUser]);
 
-  // Handle Login Success
-  const handleLoginSuccess = (username: string, role: 'admin' | 'user') => {
-    const user = { username, role };
-    sessionStorage.setItem('roadmap_planner_user', JSON.stringify(user));
-    setCurrentUser(user);
-  };
-
-  // Handle Logout
-  const handleLogout = () => {
-    sessionStorage.removeItem('roadmap_planner_user');
-    setCurrentUser(null);
-    setActiveTab('daily-todos');
-  };
-
   // Sync Programs on Edit
   const handleUpdateProgramsList = (updatedList: Program[]) => {
-    if (!currentUser) return;
     setPrograms(updatedList);
     savePrograms(updatedList, currentUser.username);
   };
 
   // Sync Challenges on Edit
   const handleUpdateChallengesList = (updatedList: Challenge[]) => {
-    if (!currentUser) return;
     setChallenges(updatedList);
     saveChallenges(updatedList, currentUser.username);
   };
 
   // Sync Todos on Edit
   const handleUpdateTodosList = (updatedList: TodoItem[]) => {
-    if (!currentUser) return;
     setTodos(updatedList);
     saveTodos(updatedList, currentUser.username);
   };
 
   // Sync Weekly Tasks
   const handleUpdateWeeklyTasks = (updatedList: WeeklyTask[]) => {
-    if (!currentUser) return;
     setWeeklyTasks(updatedList);
     saveWeeklyTasks(updatedList, currentUser.username);
   };
 
   const handleUpdateEvents = (updatedList: CalendarEvent[]) => {
-    if (!currentUser) return;
     setEvents(updatedList);
     saveEvents(updatedList, currentUser.username);
   };
 
   const handleUpdateEvent = (updatedEvent: CalendarEvent) => {
-    if (!currentUser) return;
     const updatedList = events.map(e => e.id === updatedEvent.id ? updatedEvent : e);
     setEvents(updatedList);
     saveEvents(updatedList, currentUser.username);
@@ -356,11 +316,6 @@ export default function App() {
     setMode(newMode);
     localStorage.setItem('roadmap_planner_mode', newMode);
   };
-
-  // If not logged in, show Login Screen
-  if (!currentUser) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
-  }
 
   const activeProgram = programs.find(p => p.id === activeProgramId) || programs[0];
 
@@ -541,7 +496,6 @@ export default function App() {
         onThemeChange={handleThemeChange}
         onModeChange={handleModeChange}
         onTabChange={setActiveTab}
-        onLogout={handleLogout}
         onOpenSidebar={() => setIsSidebarOpen(true)}
       />
 

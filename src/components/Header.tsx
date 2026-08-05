@@ -48,7 +48,6 @@ interface HeaderProps {
   onThemeChange: (theme: AppTheme) => void;
   onModeChange: (mode: AppMode) => void;
   onTabChange: (tab: AppTab) => void;
-  onLogout: () => void;
   onOpenSidebar: () => void;
 }
 
@@ -81,7 +80,6 @@ export default function Header({
   onThemeChange,
   onModeChange,
   onTabChange,
-  onLogout,
   onOpenSidebar
 }: HeaderProps) {
   const [showProgramDropdown, setShowProgramDropdown] = useState(false);
@@ -334,14 +332,6 @@ export default function Header({
               }`}
             >
               <Palette className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onLogout}
-              className={`p-2.5 rounded-xl transition-all border ${
-                isLight ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-rose-950/20 border-rose-900/30 text-rose-400'
-              }`}
-            >
-              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
