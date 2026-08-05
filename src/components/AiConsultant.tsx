@@ -17,7 +17,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AppTheme } from '../types';
 import Markdown from 'react-markdown';
-import { GoogleGenAI } from '@google/genai';
 
 interface Message {
   role: 'user' | 'model';
@@ -66,21 +65,30 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
     setIsLoading(true);
 
     try {
-      const genAI = new GoogleGenAI({ apiKey });
-      
-      const response = await genAI.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [
-          { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
-          ...messages.map(m => ({
-            role: m.role,
-            parts: [{ text: m.parts[0].text }]
-          })),
-          { role: 'user', parts: [{ text }] }
-        ]
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey,
+          model: 'gemini-1.5-flash',
+          contents: [
+            { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
+            ...messages.map(m => ({
+              role: m.role,
+              parts: [{ text: m.parts[0].text }]
+            })),
+            { role: 'user', parts: [{ text }] }
+          ]
+        })
       });
 
-      const responseText = response.text;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || errorData.error || 'خطا در ارتباط با سرور');
+      }
+
+      const data = await response.json();
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'پاسخی دریافت نشد.';
 
       setMessages([...newMessages, { role: 'model', parts: [{ text: responseText }] }]);
     } catch (error: any) {
