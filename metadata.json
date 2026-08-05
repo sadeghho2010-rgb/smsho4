@@ -1,0 +1,8 @@
+{
+  "name": "نسخه گیت هاب:  برنامه‌ریز بلندمدت و سیر فلوچارت",
+  "description": "سامانه مدیریت برنامه‌های جامع بلندمدت همراه با فلوچارت‌های سلسله‌مراتبی، چک‌لیست‌های پیشرفته و پشتیبانی از خروجی بکاپ",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
