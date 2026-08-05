@@ -80,7 +80,7 @@ export default function GeminiConsultationModal({
       const genAI = new GoogleGenAI({ apiKey: userApiKey });
       
       const response = await genAI.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.6-flash',
         contents: [
           { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
           ...messages.map(msg => ({
