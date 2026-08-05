@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/BIG-PLAN-APP/', // پایه آدرس برای گیت‌هاب پیجز تنظیم شد
+    base: '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
