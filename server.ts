@@ -17,40 +17,6 @@ async function startServer() {
     res.json({ status: 'ok' });
   });
 
-  // Proxy for Gemini API
-  app.post('/api/chat', async (req, res) => {
-    try {
-      const { apiKey, model, contents } = req.body;
-      
-      if (!apiKey) {
-        return res.status(400).json({ error: 'API key is required' });
-      }
-
-      // Use the provided model or default to gemini-1.5-flash
-      const targetModel = model || 'gemini-1.5-flash';
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ contents }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return res.status(response.status).json(errorData);
-      }
-
-      const data = await response.json();
-      res.json(data);
-    } catch (error: any) {
-      console.error('Proxy Error:', error);
-      res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-  });
-
   // Vite Middleware Setup
   if (!isProd) {
     const vite = await createViteServer({
