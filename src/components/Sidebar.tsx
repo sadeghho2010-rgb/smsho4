@@ -63,11 +63,9 @@ export default function Sidebar({ isOpen, onClose, activeTab, onSelectTab, theme
             {/* Header */}
             <div className="p-6 flex items-center justify-between border-b border-dashed border-slate-800/20">
               <div className="flex items-center gap-3">
-                <img 
-                  src="/app-logo.jpg" 
-                  alt="Logo" 
-                  className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover" 
-                />
+                <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                  <LayoutGrid className="w-6 h-6 text-white" />
+                </div>
                 <h2 className={`text-lg font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>منوی اصلی</h2>
               </div>
               <button 
