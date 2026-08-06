@@ -62,13 +62,6 @@ export interface BrainstormingNode {
   color: string;
   children: string[];
   tasks: ChecklistItem[];
-  isExpanded?: boolean;
-  style?: {
-    isBold?: boolean;
-    isItalic?: boolean;
-    fontSize?: number;
-    icon?: string;
-  };
 }
 
 export interface BrainstormingProject {
@@ -78,7 +71,6 @@ export interface BrainstormingProject {
   nodes: BrainstormingNode[];
   createdAt: string;
   isArchived: boolean;
-  layoutMode?: 'logic' | 'org' | 'fishbone';
 }
 
 export interface WeeklyTask {
