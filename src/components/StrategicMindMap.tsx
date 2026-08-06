@@ -1,32 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   GitBranch, 
   Plus, 
   Trash2, 
   Maximize2, 
+  Camera, 
+  Archive, 
+  ChevronDown, 
+  CheckSquare, 
+  Square, 
+  Type, 
+  X, 
+  PlusCircle, 
+  ArchiveRestore, 
+  FolderOpen,
   Settings2,
+  MousePointer2,
   Download,
-  Upload,
-  Camera,
-  Archive,
-  ArrowUpCircle,
-  ChevronDown,
-  CheckSquare,
-  Square,
-  Search,
-  Move,
-  Type,
-  ListTodo,
-  MoreVertical,
-  X,
-  PlusCircle,
-  ArchiveRestore,
-  MoreHorizontal,
+  Share2,
+  Palette,
+  Minus,
+  Navigation,
+  Layers,
+  Zap,
+  Bold,
+  Italic,
   ChevronRight,
-  Monitor,
-  Layout,
-  RefreshCw,
-  FolderOpen
+  ChevronLeft,
+  ChevronUp,
+  FileJson,
+  FileText,
+  Import,
+  Smile,
+  Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
@@ -37,380 +43,400 @@ interface StrategicMindMapProps {
 }
 
 const COLORS = [
-  '#6366f1', // indigo
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#ef4444', // rose
-  '#8b5cf6', // violet
-  '#06b6d4', // cyan
-  '#ec4899', // pink
-  '#f97316', // orange
+  '#F0F4FF', // Light Indigo
+  '#ECFDF5', // Light Emerald
+  '#FFFBEB', // Light Amber
+  '#FEF2F2', // Light Rose
+  '#F5F3FF', // Light Violet
+  '#ECFEFF', // Light Cyan
+  '#FDF2F8', // Light Pink
+  '#FFF7ED', // Light Orange
 ];
+
+const BORDER_COLORS = [
+  '#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#F97316'
+];
+
+const ICONS = ['⭐', '🔥', '✅', '⚠️', '🎯', '💡', '📌', '🚀'];
 
 export default function StrategicMindMap({ theme }: StrategicMindMapProps) {
   const [projects, setProjects] = useState<BrainstormingProject[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showStylePanel, setShowStylePanel] = useState(true);
+  
   const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const isLight = theme.startsWith('light-');
 
-  // Load projects from localStorage
+  // Load projects
   useEffect(() => {
-    const saved = localStorage.getItem('roadmap_brainstorming_projects');
+    const saved = localStorage.getItem('xmind_mindmap_v5');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const validated = parsed.map((p: any) => {
-          if (!p.nodes || p.nodes.length === 0) {
-            return {
-              ...p,
-              nodes: [
-                {
-                  id: 'root',
-                  text: 'موضوع مرکزی',
-                  x: 1500,
-                  y: 1500,
-                  color: COLORS[0],
-                  children: [],
-                  tasks: []
-                }
-              ]
-            };
-          }
-          return p;
-        });
-        setProjects(validated);
-        if (validated.length > 0) {
-          const firstActive = validated.find((p: any) => !p.isArchived);
-          if (firstActive) setActiveProjectId(firstActive.id);
-          else setActiveProjectId(validated[0].id);
+        setProjects(parsed);
+        if (parsed.length > 0) {
+          const firstActive = parsed.find((p: any) => !p.isArchived) || parsed[0];
+          setActiveProjectId(firstActive.id);
         }
-      } catch (e) {
-        console.error("Error loading brainstorming projects", e);
-      }
+      } catch (e) { console.error(e); }
     } else {
-      const defaultProject: BrainstormingProject = {
-        id: 'proj-' + Date.now(),
-        title: 'بارش فکری جدید',
-        createdAt: new Date().toISOString(),
-        isArchived: false,
-        nodes: [
-          {
-            id: 'root',
-            text: 'موضوع مرکزی',
-            x: 1500,
-            y: 1500,
-            color: COLORS[0],
-            children: [],
-            tasks: []
-          }
-        ]
-      };
-      setProjects([defaultProject]);
-      setActiveProjectId(defaultProject.id);
+      createNewProject('نقشه ذهنی استراتژیک');
     }
   }, []);
 
-  // Save projects to localStorage
+  // Save projects
   useEffect(() => {
     if (projects.length > 0) {
-      localStorage.setItem('roadmap_brainstorming_projects', JSON.stringify(projects));
+      localStorage.setItem('xmind_mindmap_v5', JSON.stringify(projects));
     }
   }, [projects]);
 
-  // Handle outside click for dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProjectDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const activeProject = projects.find(p => p.id === activeProjectId);
 
-  const createProject = () => {
+  function createNewProject(title = 'پروژه جدید') {
     const newProject: BrainstormingProject = {
       id: 'proj-' + Date.now(),
-      title: 'پروژه جدید',
+      title,
       createdAt: new Date().toISOString(),
       isArchived: false,
-      nodes: [
-        {
-          id: 'root',
-          text: 'موضوع مرکزی',
-          x: 1500,
-          y: 1500,
-          color: COLORS[0],
-          children: [],
-          tasks: []
-        }
-      ]
+      layoutMode: 'logic',
+      nodes: [{
+        id: 'root',
+        text: 'موضوع مرکزی',
+        x: 2000,
+        y: 2000,
+        color: COLORS[0],
+        children: [],
+        tasks: [],
+        isExpanded: true,
+        style: { isBold: true, fontSize: 16 }
+      }]
     };
-    setProjects([newProject, ...projects]);
+    setProjects(prev => [newProject, ...prev]);
     setActiveProjectId(newProject.id);
-    setShowProjectDropdown(false);
+    return newProject;
+  }
+
+  const updateActiveProject = (updates: Partial<BrainstormingProject>) => {
+    setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, ...updates } : p));
   };
 
-  const toggleArchiveProject = (id: string) => {
-    const updatedProjects = projects.map(p => p.id === id ? { ...p, isArchived: !p.isArchived } : p);
-    setProjects(updatedProjects);
-    
-    if (id === activeProjectId) {
-      const firstActive = updatedProjects.find(p => !p.isArchived);
-      if (firstActive) setActiveProjectId(firstActive.id);
-      else if (updatedProjects.length > 0) setActiveProjectId(updatedProjects[0].id);
-      else setActiveProjectId(null);
-    }
+  const updateNodes = (newNodes: BrainstormingNode[]) => {
+    updateActiveProject({ nodes: newNodes });
   };
 
-  const deleteProject = (id: string) => {
-    if (confirm('آیا از حذف کامل این پروژه اطمینان دارید؟')) {
-      const updated = projects.filter(p => p.id !== id);
-      setProjects(updated);
-      if (activeProjectId === id) {
-        setActiveProjectId(updated.length > 0 ? updated[0].id : null);
-      }
-    }
-  };
-
-  const updateActiveProjectNodes = (newNodes: BrainstormingNode[]) => {
-    setProjects(projects.map(p => p.id === activeProjectId ? { ...p, nodes: newNodes } : p));
-  };
-
-  const updateProjectTitle = (id: string, title: string) => {
-    setProjects(projects.map(p => p.id === id ? { ...p, title } : p));
-  };
-
-  const addNode = (parentId: string) => {
+  const addNode = (parentId: string, isSibling = false) => {
     if (!activeProject) return;
-    const parent = activeProject.nodes.find(n => n.id === parentId);
-    if (!parent) return;
+    
+    let targetParentId = parentId;
+    if (isSibling && parentId !== 'root') {
+      const parent = activeProject.nodes.find(n => n.children.includes(parentId));
+      if (parent) targetParentId = parent.id;
+      else return;
+    }
+
+    const parentNode = activeProject.nodes.find(n => n.id === targetParentId);
+    if (!parentNode) return;
 
     const newNodeId = `node-${Date.now()}`;
-    const siblingCount = parent.children.length;
-    // Spread nodes in a circular way
-    const angle = (siblingCount * 60 - 90) * (Math.PI / 180);
-    const distance = 250;
-
+    const siblings = activeProject.nodes.filter(n => parentNode.children.includes(n.id));
+    
+    // Layout Logic
+    const isRoot = targetParentId === 'root';
+    const side = isRoot ? (siblings.length % 2 === 0 ? 1 : -1) : (parentNode.x >= 2000 ? 1 : -1);
+    
+    const hGap = isRoot ? 280 : 200;
+    const vGap = 80;
+    
     const newNode: BrainstormingNode = {
       id: newNodeId,
       text: 'ایده جدید',
-      x: parent.x + Math.cos(angle) * distance,
-      y: parent.y + Math.sin(angle) * distance,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      x: parentNode.x + (side * hGap),
+      y: parentNode.y + (siblings.length * vGap - (siblings.length * vGap / 2)),
+      color: isRoot ? COLORS[siblings.length % COLORS.length] : parentNode.color,
       children: [],
-      tasks: []
+      tasks: [],
+      isExpanded: true,
+      style: { fontSize: 14 }
     };
 
     const updatedNodes = activeProject.nodes
-      .map(n => n.id === parentId ? { ...n, children: [...n.children, newNodeId] } : n)
+      .map(n => n.id === targetParentId ? { ...n, children: [...n.children, newNodeId], isExpanded: true } : n)
       .concat(newNode);
     
-    updateActiveProjectNodes(updatedNodes);
+    updateNodes(updatedNodes);
     setSelectedNodeId(newNodeId);
-  };
-
-  const updateNode = (nodeId: string, updates: Partial<BrainstormingNode>) => {
-    if (!activeProject) return;
-    const updatedNodes = activeProject.nodes.map(n => n.id === nodeId ? { ...n, ...updates } : n);
-    updateActiveProjectNodes(updatedNodes);
+    setEditingNodeId(newNodeId);
   };
 
   const deleteNode = (nodeId: string) => {
     if (!activeProject || nodeId === 'root') return;
     const toDelete = new Set<string>();
-    const findChildren = (id: string) => {
+    const findSubtree = (id: string) => {
       toDelete.add(id);
-      const node = activeProject.nodes.find(n => n.id === id);
-      node?.children.forEach(findChildren);
+      activeProject.nodes.find(n => n.id === id)?.children.forEach(findSubtree);
     };
-    findChildren(nodeId);
+    findSubtree(nodeId);
 
     const updatedNodes = activeProject.nodes
       .filter(n => !toDelete.has(n.id))
-      .map(n => ({ ...n, children: n.children.filter(childId => childId !== nodeId) }));
+      .map(n => ({ ...n, children: n.children.filter(cid => cid !== nodeId) }));
     
-    updateActiveProjectNodes(updatedNodes);
+    updateNodes(updatedNodes);
     setSelectedNodeId(null);
   };
 
-  const handleScreenshot = async () => {
-    if (stageRef.current) {
-      try {
-        const dataUrl = await toPng(stageRef.current, { 
-          quality: 1, 
-          backgroundColor: isLight ? '#ffffff' : '#000000',
-          pixelRatio: 2,
-          skipFonts: true
-        });
-        const link = document.createElement('a');
-        link.download = `brainstorming_${activeProject?.title || 'project'}.png`;
-        link.href = dataUrl;
-        link.click();
-      } catch (err) {
-        console.error('Screenshot failed', err);
+  const toggleExpand = (nodeId: string) => {
+    if (!activeProject) return;
+    updateNodes(activeProject.nodes.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
+  };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingNodeId) return;
+      if (!selectedNodeId) return;
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        addNode(selectedNodeId);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        addNode(selectedNodeId, true);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        deleteNode(selectedNodeId);
+      } else if (e.key === ' ' && !isPanning) {
+        setIsPanning(true);
       }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') setIsPanning(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [selectedNodeId, editingNodeId, activeProject, isPanning]);
+
+  // Pan & Zoom Logic
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setScale(s => Math.min(2, Math.max(0.2, s + delta)));
+    } else {
+      setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      setOffset(prev => ({ x: prev.x + e.movementX, y: prev.y + e.movementY }));
     }
   };
 
   const centerView = () => {
-    const rootNode = activeProject?.nodes.find(n => n.id === 'root');
-    if (rootNode && canvasRef.current) {
+    const root = activeProject?.nodes.find(n => n.id === 'root');
+    if (root && canvasRef.current) {
       const container = canvasRef.current;
-      container.scrollTo({
-        left: rootNode.x - container.clientWidth / 2 + 100,
-        top: rootNode.y - container.clientHeight / 2 + 50,
-        behavior: 'smooth'
+      setOffset({
+        x: -root.x + container.clientWidth / (2 * scale),
+        y: -root.y + container.clientHeight / (2 * scale)
       });
     }
   };
 
   useEffect(() => {
-    if (activeProjectId) {
-      const timer = setTimeout(centerView, 100);
-      return () => clearTimeout(timer);
-    }
+    if (activeProjectId) setTimeout(centerView, 100);
   }, [activeProjectId]);
 
-  const selectedNode = activeProject?.nodes.find(n => n.id === selectedNodeId);
+  // Export Logic
+  const exportToPNG = async () => {
+    if (stageRef.current) {
+      const dataUrl = await toPng(stageRef.current, { backgroundColor: isLight ? '#fcfcfc' : '#020617', pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `mindmap_${activeProject?.title}.png`;
+      link.href = dataUrl;
+      link.click();
+    }
+  };
+
+  const exportToJSON = () => {
+    if (!activeProject) return;
+    const blob = new Blob([JSON.stringify(activeProject, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeProject.title}.json`;
+    link.click();
+  };
+
+  const exportToMarkdown = () => {
+    if (!activeProject) return;
+    const generateMd = (nodeId: string, level: number): string => {
+      const node = activeProject.nodes.find(n => n.id === nodeId);
+      if (!node) return '';
+      let md = `${'  '.repeat(level)}- ${node.text}\n`;
+      if (node.isExpanded) {
+        node.children.forEach(cid => { md += generateMd(cid, level + 1); });
+      }
+      return md;
+    };
+    const mdContent = generateMd('root', 0);
+    const blob = new Blob([mdContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeProject.title}.md`;
+    link.click();
+  };
+
+  const importJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target?.result as string);
+          setProjects(prev => [imported, ...prev]);
+          setActiveProjectId(imported.id);
+        } catch (err) { alert('خطا در بارگذاری فایل'); }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  // Rendering Helper: Recursive Connection Lines
+  const renderConnections = (nodeId: string) => {
+    const node = activeProject?.nodes.find(n => n.id === nodeId);
+    if (!node || !node.isExpanded) return null;
+
+    return node.children.map(childId => {
+      const child = activeProject.nodes.find(n => n.id === childId);
+      if (!child) return null;
+
+      const isRoot = node.id === 'root';
+      const isRight = child.x > node.x;
+      const nodeW = isRoot ? 180 : 150;
+      const nodeH = isRoot ? 60 : 44;
+
+      const x1 = isRoot ? node.x + 90 : (isRight ? node.x + nodeW : node.x);
+      const y1 = node.y + nodeH / 2;
+      const x2 = isRight ? child.x : child.x + 150;
+      const y2 = child.y + 22;
+
+      const cp1x = x1 + (x2 - x1) * 0.5;
+      const cp2x = x1 + (x2 - x1) * 0.5;
+
+      return (
+        <React.Fragment key={`conn-${nodeId}-${childId}`}>
+          <path
+            d={`M ${x1} ${y1} C ${cp1x} ${y1}, ${cp2x} ${y2}, ${x2} ${y2}`}
+            fill="none"
+            stroke={node.color}
+            strokeWidth={isRoot ? "3" : "1.5"}
+            strokeOpacity="0.4"
+            strokeLinecap="round"
+          />
+          {renderConnections(childId)}
+        </React.Fragment>
+      );
+    });
+  };
 
   return (
-    <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden select-none bg-slate-50 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800" dir="rtl">
+    <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden bg-[#fcfcfc] dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl relative" dir="rtl">
       
-      {/* Top Bar Navigation */}
-      <div className={`h-16 px-6 border-b flex items-center justify-between z-50 ${isLight ? 'bg-white/80' : 'bg-slate-900/80'} backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50`}>
+      {/* Top Navigation Bar */}
+      <div className="h-14 px-6 border-b flex items-center justify-between z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50">
         <div className="flex items-center gap-4">
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative">
             <button 
               onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all shadow-sm ${
-                isLight ? 'bg-white border-slate-200 hover:border-indigo-300 text-slate-800' : 'bg-slate-950 border-slate-800 hover:border-indigo-500 text-white'
-              }`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm hover:border-indigo-400 transition-all"
             >
               <GitBranch className="w-4 h-4 text-indigo-500" />
-              <span className="text-xs font-black truncate max-w-[200px]">
-                {activeProject?.title || 'انتخاب پروژه'}
-              </span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showProjectDropdown ? 'rotate-180' : ''} text-slate-400`} />
+              <span className="text-[13px] font-black">{activeProject?.title}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
-
             <AnimatePresence>
               {showProjectDropdown && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className={`absolute top-full right-0 mt-3 w-72 rounded-[32px] border shadow-2xl z-[100] p-2 overflow-hidden ${
-                    isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 z-[100]"
                 >
-                  <div className="flex items-center justify-between px-4 py-3 mb-2 border-b border-dashed border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">فهرست پروژه‌ها</span>
-                    <button 
-                      onClick={createProject} 
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all text-[10px] font-bold"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      جدید
-                    </button>
+                  <div className="flex justify-between items-center px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">پروژه‌ها</span>
+                    <button onClick={() => { createNewProject(); setShowProjectDropdown(false); }} className="p-1.5 bg-indigo-600 text-white rounded-lg"><Plus className="w-4 h-4" /></button>
                   </div>
-                  <div className="max-h-[350px] overflow-y-auto custom-scrollbar space-y-1">
-                    {projects.filter(p => !p.isArchived).map(p => (
-                      <div key={p.id} className="relative group">
-                        <button 
-                          onClick={() => { setActiveProjectId(p.id); setShowProjectDropdown(false); }}
-                          className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-right transition-all ${
-                            activeProjectId === p.id 
-                              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-                              : isLight ? 'hover:bg-slate-50 text-slate-700' : 'hover:bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-2 h-2 rounded-full ${activeProjectId === p.id ? 'bg-white' : 'bg-indigo-500'}`} />
-                            <span className="text-xs font-bold truncate">{p.title}</span>
-                          </div>
-                          <ChevronRight className={`w-3.5 h-3.5 transition-transform ${activeProjectId === p.id ? 'translate-x-0' : 'translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-40'}`} />
-                        </button>
-                      </div>
+                  <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                    {projects.map(p => (
+                      <button 
+                        key={p.id}
+                        onClick={() => { setActiveProjectId(p.id); setShowProjectDropdown(false); }}
+                        className={`w-full text-right px-4 py-3 rounded-xl text-[12px] font-bold flex justify-between items-center transition-all ${activeProjectId === p.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+                      >
+                        {p.title}
+                        {activeProjectId === p.id && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+                      </button>
                     ))}
-                    {projects.filter(p => !p.isArchived).length === 0 && (
-                      <div className="py-8 text-center text-[10px] text-slate-500 font-bold italic">
-                        هیچ پروژه‌ای وجود ندارد
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-800">
-                    <button 
-                      onClick={() => { setShowArchiveModal(true); setShowProjectDropdown(false); }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-bold transition-all ${
-                        isLight ? 'text-slate-600 hover:bg-slate-50' : 'text-slate-400 hover:bg-slate-800'
-                      }`}
-                    >
-                      <Archive className="w-4 h-4 text-amber-500" />
-                      مشاهده آرشیو پروژه‌ها
-                    </button>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
-
-          <div className="flex items-center gap-1.5">
-             <button 
-               onClick={centerView} 
-               className={`p-2.5 rounded-2xl transition-all ${isLight ? 'hover:bg-slate-100 text-slate-600' : 'hover:bg-slate-800 text-slate-400'}`} 
-               title="بازگشت به مرکز"
-             >
-               <Maximize2 className="w-4.5 h-4.5" />
-             </button>
-             <button 
-               onClick={handleScreenshot} 
-               className={`p-2.5 rounded-2xl transition-all ${isLight ? 'hover:bg-slate-100 text-slate-600' : 'hover:bg-slate-800 text-slate-400'}`} 
-               title="ذخیره به صورت عکس"
-             >
-               <Camera className="w-4.5 h-4.5" />
-             </button>
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+          
+          <div className="flex items-center gap-1">
+             <button onClick={() => setScale(Math.max(0.2, scale - 0.1))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><Minus className="w-4 h-4" /></button>
+             <span className="text-[11px] font-black w-12 text-center text-slate-500">{Math.round(scale * 100)}%</span>
+             <button onClick={() => setScale(Math.min(2, scale + 0.1))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><Plus className="w-4 h-4" /></button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1 p-1.5 rounded-2xl ${isLight ? 'bg-white' : 'bg-slate-950'} border border-slate-200 dark:border-slate-800 shadow-sm`}>
+        <div className="flex items-center gap-2">
+          <div className="relative">
             <button 
-              onClick={() => setScale(Math.max(0.3, scale - 0.1))} 
-              className={`p-2 rounded-xl transition-all ${isLight ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-slate-900 text-slate-400'}`}
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-[12px] font-black flex items-center gap-2 shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all"
             >
-              <Trash2 className="w-4 h-4 rotate-45" />
+              <Download className="w-4 h-4" />
+              خروجی
             </button>
-            <div className="w-12 text-center text-[10px] font-black font-mono tracking-tighter dark:text-slate-500">{Math.round(scale * 100)}%</div>
-            <button 
-              onClick={() => setScale(Math.min(2, scale + 0.1))} 
-              className={`p-2 rounded-xl transition-all ${isLight ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-slate-900 text-slate-400'}`}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <AnimatePresence>
+              {showExportMenu && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 z-[100]"
+                >
+                  <button onClick={exportToPNG} className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-bold flex items-center gap-2"><Camera className="w-4 h-4 text-indigo-500" /> ذخیره به صورت عکس (PNG)</button>
+                  <button onClick={exportToJSON} className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-bold flex items-center gap-2"><FileJson className="w-4 h-4 text-emerald-500" /> دریافت فایل JSON</button>
+                  <button onClick={exportToMarkdown} className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-bold flex items-center gap-2"><FileText className="w-4 h-4 text-amber-500" /> خروجی Markdown</button>
+                  <label className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-bold flex items-center gap-2 cursor-pointer">
+                    <Import className="w-4 h-4 text-violet-500" /> 
+                    وارد کردن پروژه
+                    <input type="file" accept=".json" onChange={importJSON} className="hidden" />
+                  </label>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          
-          <button 
-            onClick={() => { if(activeProject) toggleArchiveProject(activeProject.id); }}
-            className={`px-5 py-2.5 rounded-2xl text-[11px] font-black transition-all flex items-center gap-2 shadow-sm ${
-              isLight ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
-            }`}
-          >
-            <Archive className="w-4 h-4" />
-            آرشیو پروژه
-          </button>
+          <button onClick={centerView} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500" title="تمرکز روی ریشه"><Maximize2 className="w-5 h-5" /></button>
+          <button onClick={() => setShowStylePanel(!showStylePanel)} className={`p-2 rounded-xl transition-all ${showStylePanel ? 'bg-slate-100 dark:bg-slate-800 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}><Settings2 className="w-5 h-5" /></button>
         </div>
       </div>
 
@@ -419,342 +445,240 @@ export default function StrategicMindMap({ theme }: StrategicMindMapProps) {
         {/* Infinite Canvas */}
         <div 
           ref={canvasRef}
-          className={`flex-1 relative overflow-auto custom-scrollbar cursor-grab active:cursor-grabbing ${isLight ? 'bg-white' : 'bg-slate-950'}`}
-          style={{ 
-            backgroundImage: isLight 
-              ? 'radial-gradient(#cbd5e1 0.8px, transparent 0.8px)' 
-              : 'radial-gradient(#1e293b 0.8px, transparent 0.8px)',
-            backgroundSize: '32px 32px'
-          }}
+          className={`flex-1 relative overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+          onWheel={handleWheel}
+          onMouseMove={handleMouseMove}
+          onMouseDown={(e) => { if (e.button === 1 || e.altKey) setIsPanning(true); }}
+          onMouseUp={() => setIsPanning(false)}
         >
           <div 
             ref={stageRef}
-            className="min-w-[4000px] min-h-[4000px] relative p-[1000px] origin-top-left transition-transform duration-150 ease-out"
-            style={{ transform: `scale(${scale})` }}
+            className="absolute inset-0 origin-top-left transition-transform duration-75"
+            style={{ transform: `scale(${scale}) translate(${offset.x}px, ${offset.y}px)` }}
+            onClick={() => { setSelectedNodeId(null); setEditingNodeId(null); }}
           >
-            {/* SVG Connections Layer */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-              <defs>
-                <filter id="soft-glow">
-                  <feGaussianBlur stdDeviation="1.5" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-              {activeProject?.nodes.map(node => node.children.map(childId => {
-                const child = activeProject.nodes.find(n => n.id === childId);
-                if (!child) return null;
-                
-                const x1 = node.x + 104;
-                const y1 = node.y + 40;
-                const x2 = child.x + 104;
-                const y2 = child.y + 40;
+            {/* Background Grid */}
+            <div className="absolute inset-[-5000px] pointer-events-none" 
+              style={{ 
+                backgroundImage: isLight 
+                  ? 'radial-gradient(#e5e7eb 1.5px, transparent 1.5px)' 
+                  : 'radial-gradient(#1e293b 1.5px, transparent 1.5px)',
+                backgroundSize: '40px 40px'
+              }} 
+            />
 
-                return (
-                  <path
-                    key={`${node.id}-${child.id}`}
-                    d={`M ${x1} ${y1} C ${x1 + (x2-x1)/2} ${y1}, ${x1 + (x2-x1)/2} ${y2}, ${x2} ${y2}`}
-                    fill="none"
-                    stroke={node.color}
-                    strokeWidth="4"
-                    strokeOpacity="0.4"
-                    strokeLinecap="round"
-                    filter="url(#soft-glow)"
-                    className="transition-all duration-300"
-                  />
-                );
-              }))}
+            {/* SVG Connections */}
+            <svg className="absolute inset-[-5000px] w-[10000px] h-[10000px] pointer-events-none overflow-visible">
+              {renderConnections('root')}
             </svg>
 
-            {/* Nodes Layer */}
-            {activeProject?.nodes.map(node => (
-              <motion.div
-                key={node.id}
-                drag
-                dragMomentum={false}
-                onDrag={(e, info) => {
-                   const updatedNodes = activeProject.nodes.map(n => n.id === node.id ? { ...n, x: n.x + info.delta.x / scale, y: n.y + info.delta.y / scale } : n);
-                   updateActiveProjectNodes(updatedNodes);
-                }}
-                initial={false}
-                animate={{ x: node.x, y: node.y }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedNodeId(node.id);
-                }}
-                className={`absolute w-52 p-4 rounded-3xl border-4 cursor-grab active:cursor-grabbing transition-all flex flex-col gap-2 ${
-                  selectedNodeId === node.id
-                    ? 'border-white scale-110 shadow-2xl z-40 ring-[12px] ring-indigo-500/10'
-                    : 'border-transparent shadow-xl z-20'
-                }`}
-                style={{ 
-                  backgroundColor: node.color,
-                  boxShadow: `0 20px 40px -12px ${node.color}50`
-                }}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-[13px] font-black text-right leading-relaxed line-clamp-4 drop-shadow-md">
-                      {node.text}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    {node.tasks.length > 0 && (
-                      <div className="bg-white/30 backdrop-blur-md px-1.5 py-1 rounded-xl text-[9px] text-white font-black text-center min-w-[32px]">
-                        {node.tasks.filter(t => t.completed).length}/{node.tasks.length}
+            {/* Nodes */}
+            {activeProject?.nodes.map(node => {
+              const isSelected = selectedNodeId === node.id;
+              const isEditing = editingNodeId === node.id;
+              const isRoot = node.id === 'root';
+              
+              // Check if parent is expanded
+              const parent = activeProject.nodes.find(n => n.children.includes(node.id));
+              if (parent && !parent.isExpanded) return null;
+
+              return (
+                <motion.div
+                  key={node.id}
+                  drag
+                  dragMomentum={false}
+                  onDrag={(e, info) => {
+                     const updated = activeProject.nodes.map(n => n.id === node.id ? { ...n, x: n.x + info.delta.x / scale, y: n.y + info.delta.y / scale } : n);
+                     updateNodes(updated);
+                  }}
+                  initial={false}
+                  animate={{ x: node.x, y: node.y }}
+                  className={`absolute z-20 group transition-all ${isSelected ? 'z-50' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); setSelectedNodeId(node.id); }}
+                  onDoubleClick={(e) => { e.stopPropagation(); setEditingNodeId(node.id); }}
+                >
+                  <div 
+                    className={`relative ${isRoot ? 'w-[180px] min-h-[60px]' : 'min-w-[150px] min-h-[44px]'} p-3 rounded-2xl border-2 transition-all flex flex-col justify-center items-center shadow-lg ${
+                      isRoot 
+                        ? 'bg-indigo-600 border-indigo-500 text-white' 
+                        : isLight 
+                          ? 'bg-white border-transparent' 
+                          : 'bg-slate-900 border-slate-800 text-white'
+                    } ${isSelected ? 'ring-4 ring-indigo-500/20 !border-indigo-500 scale-105' : ''}`}
+                    style={{ 
+                      backgroundColor: !isRoot ? node.color : undefined,
+                      borderColor: !isRoot && isSelected ? BORDER_COLORS[COLORS.indexOf(node.color)] : undefined,
+                      borderRight: !isRoot ? `4px solid ${BORDER_COLORS[COLORS.indexOf(node.color)] || '#4F46E5'}` : undefined
+                    }}
+                  >
+                    {isEditing ? (
+                      <textarea
+                        autoFocus
+                        value={node.text}
+                        onChange={(e) => updateNodes(activeProject.nodes.map(n => n.id === node.id ? { ...n, text: e.target.value } : n))}
+                        onBlur={() => setEditingNodeId(null)}
+                        onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingNodeId(null); } }}
+                        className="w-full bg-transparent border-none outline-none text-inherit text-center resize-none scrollbar-hide font-black text-[13px] leading-snug"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {node.style?.icon && <span className="text-lg">{node.style.icon}</span>}
+                        <span className={`text-[13px] font-black leading-tight text-center ${node.style?.isBold ? 'font-black' : 'font-bold'} ${node.style?.isItalic ? 'italic' : ''}`} style={{ fontSize: node.style?.fontSize ? `${node.style.fontSize}px` : undefined }}>
+                          {node.text}
+                        </span>
                       </div>
                     )}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); addNode(node.id); }}
-                      className="p-1.5 bg-white/30 hover:bg-white/50 rounded-xl text-white transition-all active:scale-90"
-                      title="افزودن زیرمجموعه"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+
+                    {/* Expand/Collapse Toggle */}
+                    {node.children.length > 0 && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}
+                        className={`absolute -right-2 top-1/2 -translate-y-1/2 w-5 h-5 bg-white dark:bg-slate-800 rounded-full shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all hover:scale-110 z-[30]`}
+                      >
+                        {node.isExpanded ? <Minus className="w-3 h-3 text-slate-400" /> : <Plus className="w-3 h-3 text-indigo-600" />}
+                      </button>
+                    )}
+
+                    {/* Quick Action Overlays */}
+                    <AnimatePresence>
+                      {isSelected && !isEditing && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                          className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800"
+                        >
+                          <button onClick={() => addNode(node.id)} className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 rounded-xl transition-all" title="افزودن فرزند (Tab)"><PlusCircle className="w-4.5 h-4.5" /></button>
+                          <button onClick={() => addNode(node.id, true)} className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 rounded-xl transition-all" title="افزودن برادر (Enter)"><Layers className="w-4.5 h-4.5" /></button>
+                          {!isRoot && <button onClick={() => deleteNode(node.id)} className="p-2 hover:bg-rose-50 text-rose-500 rounded-xl transition-all"><Trash2 className="w-4.5 h-4.5" /></button>}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Side Property Editor */}
+        {/* Right Properties Panel */}
         <AnimatePresence>
-          {selectedNodeId && selectedNode && (
+          {showStylePanel && (
             <motion.div 
-              initial={{ x: 400, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 400, opacity: 0 }}
-              className={`absolute top-6 bottom-6 right-6 w-85 rounded-[48px] border shadow-2xl z-[60] flex flex-col overflow-hidden backdrop-blur-2xl ${
-                isLight ? 'bg-white/95 border-slate-200' : 'bg-slate-900/95 border-slate-800'
-              }`}
+              initial={{ x: 320 }} animate={{ x: 0 }} exit={{ x: 320 }}
+              className="w-80 border-r bg-white dark:bg-slate-900 shadow-2xl z-50 p-6 flex flex-col gap-8 border-slate-200 dark:border-slate-800"
             >
-              <div className="p-8 flex items-center justify-between border-b border-dashed border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
-                    <Type className="w-5 h-5" />
-                  </div>
-                  <h3 className={`text-base font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>ویرایش ایده</h3>
-                </div>
-                <button 
-                  onClick={() => setSelectedNodeId(null)} 
-                  className={`p-2.5 rounded-2xl transition-colors ${isLight ? 'hover:bg-slate-100' : 'hover:bg-slate-800'}`}
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black flex items-center gap-2 text-slate-800 dark:text-white"><Palette className="w-4.5 h-4.5 text-indigo-500" /> استایل و شخصی‌سازی</h3>
+                <button onClick={() => setShowStylePanel(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block mr-1">عنوان ایده یا موضوع</label>
-                  <textarea
-                    autoFocus
-                    value={selectedNode.text}
-                    onChange={(e) => updateNode(selectedNode.id, { text: e.target.value })}
-                    className={`w-full px-5 py-4 rounded-[32px] text-sm font-bold focus:outline-none border transition-all resize-none h-32 leading-relaxed ${
-                      isLight 
-                        ? 'bg-slate-50 border-slate-100 focus:border-indigo-400 text-slate-800 focus:bg-white' 
-                        : 'bg-slate-950 border-slate-800 focus:border-indigo-500 text-white focus:bg-black'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 block mr-1">انتخاب رنگ تم</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => updateNode(selectedNode.id, { color })}
-                        className={`h-10 rounded-2xl border-4 transition-all active:scale-90 ${
-                          selectedNode.color === color ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ 
-                          backgroundColor: color,
-                          boxShadow: selectedNode.color === color ? `0 0 20px ${color}60` : 'none'
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-dashed border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="text-[10px] font-black text-slate-400 flex items-center gap-2 mr-1">
-                      <ListTodo className="w-4 h-4" />
-                      لیست اقدامات (Checklist)
-                    </span>
-                    <button 
-                      onClick={() => {
-                        const newTask = { id: 'task-'+Date.now(), text: 'اقدام جدید', completed: false };
-                        updateNode(selectedNode.id, { tasks: [...selectedNode.tasks, newTask] });
-                      }}
-                      className="text-[11px] font-black text-indigo-500 flex items-center gap-1.5 hover:translate-x-1 transition-transform"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      افزودن مورد
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {selectedNode.tasks.map(task => (
-                      <div key={task.id} className="flex items-center gap-3 group animate-in slide-in-from-right-2 duration-200">
+              {selectedNodeId ? (
+                <div className="space-y-10">
+                  <section>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">انتخاب تم رنگی</label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {COLORS.map((c, idx) => (
                         <button 
-                          onClick={() => {
-                            const updated = selectedNode.tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t);
-                            updateNode(selectedNode.id, { tasks: updated });
-                          }}
-                          className={`shrink-0 transition-all ${task.completed ? 'text-emerald-500 scale-110' : 'text-slate-400 hover:text-indigo-500'}`}
-                        >
-                          {task.completed ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                        </button>
-                        <input 
-                          type="text"
-                          value={task.text}
-                          onChange={(e) => {
-                            const updated = selectedNode.tasks.map(t => t.id === task.id ? { ...t, text: e.target.value } : t);
-                            updateNode(selectedNode.id, { tasks: updated });
-                          }}
-                          className={`flex-1 bg-transparent text-xs font-bold focus:outline-none transition-all ${
-                            task.completed ? 'line-through opacity-40 text-slate-500' : isLight ? 'text-slate-700' : 'text-slate-200'
-                          }`}
+                          key={c}
+                          onClick={() => updateNodes(activeProject!.nodes.map(n => n.id === selectedNodeId ? { ...n, color: c } : n))}
+                          className={`h-9 rounded-xl border-2 transition-all ${activeProject?.nodes.find(n => n.id === selectedNodeId)?.color === c ? 'border-indigo-600 scale-110 shadow-lg' : 'border-transparent'}`}
+                          style={{ backgroundColor: c }}
                         />
-                        <button 
-                          onClick={() => {
-                            const updated = selectedNode.tasks.filter(t => t.id !== task.id);
-                            updateNode(selectedNode.id, { tasks: updated });
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                    {selectedNode.tasks.length === 0 && (
-                      <div className="text-center py-10 rounded-[32px] border-2 border-dashed border-slate-100 dark:border-slate-800 opacity-40">
-                         <p className="text-[10px] font-bold">هیچ اقدامی ثبت نشده است</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                      ))}
+                    </div>
+                  </section>
 
-              <div className="p-8 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
-                <button 
-                  onClick={() => addNode(selectedNode.id)}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-[24px] text-xs font-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 active:scale-95"
-                >
-                  <Plus className="w-5 h-5" />
-                  زیرمجموعه جدید
-                </button>
-                {selectedNode.id !== 'root' && (
-                  <button 
-                    onClick={() => deleteNode(selectedNode.id)}
-                    className="p-4 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-[24px] transition-all border border-rose-500/20 active:scale-95"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
+                  <section>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">قالب‌بندی متن</label>
+                    <div className="flex gap-2">
+                       <button 
+                         onClick={() => {
+                           const node = activeProject?.nodes.find(n => n.id === selectedNodeId);
+                           const style = node?.style || {};
+                           updateNodes(activeProject!.nodes.map(n => n.id === selectedNodeId ? { ...n, style: { ...style, isBold: !style.isBold } } : n));
+                         }}
+                         className={`flex-1 py-2.5 rounded-xl border flex items-center justify-center transition-all ${activeProject?.nodes.find(n => n.id === selectedNodeId)?.style?.isBold ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700'}`}
+                       >
+                         <Bold className="w-4 h-4" />
+                       </button>
+                       <button 
+                         onClick={() => {
+                           const node = activeProject?.nodes.find(n => n.id === selectedNodeId);
+                           const style = node?.style || {};
+                           updateNodes(activeProject!.nodes.map(n => n.id === selectedNodeId ? { ...n, style: { ...style, isItalic: !style.isItalic } } : n));
+                         }}
+                         className={`flex-1 py-2.5 rounded-xl border flex items-center justify-center transition-all ${activeProject?.nodes.find(n => n.id === selectedNodeId)?.style?.isItalic ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700'}`}
+                       >
+                         <Italic className="w-4 h-4" />
+                       </button>
+                    </div>
+                  </section>
+
+                  <section>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">آیکون و وضعیت</label>
+                    <div className="grid grid-cols-4 gap-2">
+                       {ICONS.map(icon => (
+                         <button 
+                           key={icon}
+                           onClick={() => {
+                             const node = activeProject?.nodes.find(n => n.id === selectedNodeId);
+                             const style = node?.style || {};
+                             updateNodes(activeProject!.nodes.map(n => n.id === selectedNodeId ? { ...n, style: { ...style, icon: style.icon === icon ? undefined : icon } } : n));
+                           }}
+                           className={`h-10 text-lg rounded-xl transition-all ${activeProject?.nodes.find(n => n.id === selectedNodeId)?.style?.icon === icon ? 'bg-indigo-50 dark:bg-indigo-900/30 scale-110 shadow-md ring-2 ring-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                         >
+                           {icon}
+                         </button>
+                       ))}
+                    </div>
+                  </section>
+
+                  <section className="pt-6 border-t border-dashed border-slate-200 dark:border-slate-800">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">طرح‌بندی پروژه (Layout)</label>
+                    <div className="grid grid-cols-1 gap-2">
+                       {[
+                         { id: 'logic', label: 'نقشه منطقی (Logic Map)', icon: <GitBranch className="w-4 h-4" /> },
+                         { id: 'org', label: 'نمودار سازمانی (Org Chart)', icon: <Layout className="w-4 h-4" /> },
+                         { id: 'fishbone', label: 'استخوان ماهی (Fishbone)', icon: <Zap className="w-4 h-4" /> }
+                       ].map(mode => (
+                         <button 
+                           key={mode.id}
+                           onClick={() => updateActiveProject({ layoutMode: mode.id as any })}
+                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-[11px] font-black transition-all ${activeProject?.layoutMode === mode.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}
+                         >
+                           {mode.icon}
+                           {mode.label}
+                         </button>
+                       ))}
+                    </div>
+                  </section>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 gap-6">
+                  <div className="p-8 rounded-[40px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600">
+                    <MousePointer2 className="w-16 h-16" />
+                  </div>
+                  <p className="text-[13px] font-black leading-relaxed px-6">برای ویرایش استایل، یکی از گره‌ها را انتخاب کنید</p>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Empty State Overlay */}
-        {!activeProject && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 z-10 bg-slate-50 dark:bg-slate-950">
-            <div className="w-32 h-32 rounded-[48px] bg-indigo-600/5 flex items-center justify-center mb-8 animate-pulse">
-              <RefreshCw className="w-12 h-12 text-indigo-500 animate-spin-slow" />
-            </div>
-            <h3 className={`text-2xl font-black mb-3 ${isLight ? 'text-slate-900' : 'text-white'}`}>شروع خلاقیت و برنامه‌ریزی</h3>
-            <p className="text-sm text-slate-500 max-w-sm mb-10 leading-relaxed font-medium">پروژه‌های بارش فکری (Brainstorming) به شما کمک می‌کنند ایده‌های خام خود را ساختاردهی کنید.</p>
-            <button 
-              onClick={createProject}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-5 rounded-[32px] text-sm font-black shadow-2xl shadow-indigo-600/40 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
-            >
-              <Plus className="w-5 h-5" />
-              ساخت اولین پروژه
-            </button>
-          </div>
-        )}
+        {/* Floating Shortcuts Hint */}
+        <div className="absolute bottom-10 right-10 z-[60] flex flex-col gap-2 pointer-events-none">
+           {[
+             { k: 'Tab', v: 'افزودن فرزند' },
+             { k: 'Enter', v: 'افزودن هم‌رده' },
+             { k: 'Space', v: 'جابجایی صفحه' },
+             { k: 'Double Click', v: 'ویرایش متن' }
+           ].map(s => (
+             <div key={s.k} className="flex items-center justify-end gap-3 opacity-40">
+               <span className="text-[10px] font-black dark:text-white">{s.v}</span>
+               <kbd className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[9px] font-black shadow-sm dark:text-slate-400">{s.k}</kbd>
+             </div>
+           ))}
+        </div>
       </div>
-
-      {/* Archive Modal Section */}
-      <AnimatePresence>
-        {showArchiveModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowArchiveModal(false)} className="fixed inset-0 bg-black/70 backdrop-blur-lg" />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 40 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 40 }}
-              className={`relative w-full max-w-xl rounded-[56px] border shadow-2xl overflow-hidden ${
-                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-              }`}
-            >
-              <div className="p-10 flex items-center justify-between border-b border-dashed border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-[28px] bg-amber-500/10 text-amber-500 shadow-inner">
-                    <Archive className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className={`text-xl font-black ${isLight ? 'text-slate-900' : 'text-white'}`}>بایگانی پروژه‌ها</h3>
-                    <p className="text-xs text-slate-400 font-bold mt-1">مدیریت و بازگردانی ایده‌های آرشیو شده</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowArchiveModal(false)} className={`p-3 rounded-2xl transition-all ${isLight ? 'hover:bg-slate-100' : 'hover:bg-slate-800'}`}>
-                  <X className="w-6 h-6 text-slate-400" />
-                </button>
-              </div>
-              
-              <div className="p-10 max-h-[450px] overflow-y-auto custom-scrollbar space-y-4">
-                {projects.filter(p => p.isArchived).map(project => (
-                  <div key={project.id} className={`flex items-center justify-between p-5 rounded-[32px] border transition-all ${
-                    isLight ? 'bg-slate-50 border-slate-100 hover:border-indigo-200' : 'bg-slate-950 border-slate-800 hover:border-indigo-900'
-                  }`}>
-                    <div className="flex flex-col gap-1.5 px-2">
-                      <span className={`text-sm font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>{project.title}</span>
-                      <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">ساخته شده: {new Date(project.createdAt).toLocaleDateString('fa-IR')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => toggleArchiveProject(project.id)}
-                        className="p-3 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-2xl transition-all border border-emerald-500/20 active:scale-90"
-                        title="خروج از آرشیو"
-                      >
-                        <ArchiveRestore className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => deleteProject(project.id)}
-                        className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-2xl transition-all border border-rose-500/20 active:scale-90"
-                        title="حذف دائمی"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                
-                {projects.filter(p => p.isArchived).length === 0 && (
-                  <div className="text-center py-20 opacity-30">
-                    <FolderOpen className="w-16 h-16 mx-auto mb-6 text-slate-400" />
-                    <p className="text-xs font-black uppercase tracking-[0.2em]">آرشیو خالی است</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-10 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800">
-                <button 
-                  onClick={() => setShowArchiveModal(false)} 
-                  className={`w-full py-5 rounded-[24px] text-xs font-black transition-all ${
-                    isLight ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  بستن پنل بایگانی
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
