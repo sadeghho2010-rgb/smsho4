@@ -453,11 +453,9 @@ export default function DailyTodos({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Create state
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc] = useState('');
+  const [quickEntryTitle, setQuickEntryTitle] = useState('');
   const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
   const [activeTodoId, setActiveTodoId] = useState<string | null>(null);
-  const [isAddingTodo, setIsAddingTodo] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -581,10 +579,9 @@ export default function DailyTodos({
     }
   };
 
-  // Add a new main To-Do
-  const handleAddTodo = (e: React.FormEvent) => {
+  const handleQuickAddTodo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!quickEntryTitle.trim()) return;
 
     const now = new Date();
     const targetDate = new Date(selectedDate);
@@ -592,17 +589,14 @@ export default function DailyTodos({
 
     const newTodo: TodoItem = {
       id: `todo-${Date.now()}`,
-      title: newTitle.trim(),
-      description: newDesc.trim() || undefined,
+      title: quickEntryTitle.trim(),
       completed: false,
       subTasks: [],
       createdAt: targetDate.toISOString()
     };
 
     onUpdateTodos([newTodo, ...todos]);
-    setNewTitle('');
-    setNewDesc('');
-    setExpandedTodoId(null);
+    setQuickEntryTitle('');
   };
 
   // Handle Edit
@@ -1055,78 +1049,6 @@ export default function DailyTodos({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <div className="lg:col-span-4 space-y-4">
-          <div className={`border rounded-3xl overflow-hidden shadow-sm sticky top-36 ${
-            isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-850'
-          }`}>
-            <button
-              onClick={() => setIsAddingTodo(!isAddingTodo)}
-              className={`w-full p-5 flex items-center justify-between gap-3 hover:bg-slate-800/5 transition-colors cursor-pointer text-right`}
-              dir="rtl"
-            >
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-xl ${isLight ? 'bg-emerald-50 text-emerald-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                  <Plus className={`w-4 h-4 transition-transform duration-300 ${isAddingTodo ? 'rotate-45' : ''}`} />
-                </div>
-                <div>
-                  <h3 className={`text-xs font-black ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>افزودن کار روزانه جدید</h3>
-                  {!isAddingTodo && <p className="text-[10px] text-slate-500 mt-0.5">برای ثبت کار جدید کلیک کنید</p>}
-                </div>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-300 ${isAddingTodo ? 'rotate-180' : ''}`} />
-            </button>
-
-            <AnimatePresence>
-              {isAddingTodo && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                >
-                  <form 
-                    onSubmit={(e) => {
-                      handleAddTodo(e);
-                      setIsAddingTodo(false);
-                    }} 
-                    className="p-5 pt-0 space-y-4"
-                  >
-                    <div className="space-y-1">
-                      <label className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>عنوان کار *</label>
-                      <input
-                        type="text"
-                        placeholder="مثال: ورزش صبحگاهی..."
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        className={`w-full px-3.5 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 transition-colors ${isLight ? 'bg-slate-50 border-slate-200 text-slate-805' : 'bg-slate-950 border-slate-750 text-white'}`}
-                        required
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className={`text-[10px] font-bold block ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>توضیحات تکمیلی (اختیاری)</label>
-                      <textarea
-                        placeholder="یادداشت‌های مرتبط..."
-                        value={newDesc}
-                        onChange={(e) => setNewDesc(e.target.value)}
-                        rows={3}
-                        className={`w-full px-3.5 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-emerald-500 transition-colors resize-none ${isLight ? 'bg-slate-50 border-slate-200 text-slate-805' : 'bg-slate-950 border-slate-750 text-white'}`}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>ثبت کار جدید</span>
-                    </button>
-                  </form>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
           <AnimatePresence>
             {editingTodo && (
               <motion.div
@@ -1186,6 +1108,39 @@ export default function DailyTodos({
         </div>
 
         <div className="lg:col-span-8 space-y-4">
+          {/* Quick Entry Box */}
+          <div className={`p-4 rounded-3xl border transition-all duration-300 shadow-sm group ${
+            isLight ? 'bg-white border-slate-200 focus-within:border-emerald-500/50' : 'bg-slate-900 border-slate-850 focus-within:border-emerald-500/50'
+          }`}>
+            <form onSubmit={handleQuickAddTodo} className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl shrink-0 transition-transform group-focus-within:scale-110 ${isLight ? 'bg-emerald-50 text-emerald-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                <Plus className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                placeholder="ثبت کار جدید..."
+                value={quickEntryTitle}
+                onChange={(e) => setQuickEntryTitle(e.target.value)}
+                className={`flex-1 bg-transparent border-none focus:outline-none text-sm font-bold ${
+                  isLight ? 'text-slate-800 placeholder:text-slate-400' : 'text-slate-100 placeholder:text-slate-500'
+                }`}
+              />
+              <AnimatePresence>
+                {quickEntryTitle.trim() && (
+                  <motion.button 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    type="submit"
+                    className="text-emerald-500 hover:text-emerald-400 font-black text-xs px-4 py-2 rounded-xl bg-emerald-500/10 transition-colors cursor-pointer"
+                  >
+                    ثبت (Enter)
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </form>
+          </div>
+
           {filteredTodos.length === 0 ? (
             <div className={`text-center py-24 border border-dashed rounded-3xl space-y-4 ${isLight ? 'bg-slate-50/50 border-slate-200/80' : 'bg-slate-900/10 border-slate-850'}`}>
               <CheckSquare className="w-12 h-12 text-slate-500 mx-auto animate-pulse" />

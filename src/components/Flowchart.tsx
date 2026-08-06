@@ -109,7 +109,7 @@ export default function Flowchart({ program, mode, onUpdateProgram, isLight = fa
   
   // Toggles to show checklists on board (For advanced mode)
   const [showChecklistsDirectly, setShowChecklistsDirectly] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
+  const [isCompact, setIsCompact] = useState(true);
 
   // Creation States
   const [showAddPath, setShowAddPath] = useState(false);

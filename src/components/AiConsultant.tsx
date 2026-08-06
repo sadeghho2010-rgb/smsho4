@@ -12,20 +12,18 @@ import {
   Gift,
   MapPin,
   PartyPopper,
-  MessageSquare
+  MessageSquare,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppTheme } from '../types';
+import { AppTheme, Message } from '../types';
 import Markdown from 'react-markdown';
-import { GoogleGenAI } from '@google/genai';
-
-interface Message {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
 
 interface AiConsultantProps {
   theme: AppTheme;
+  messages: Message[];
+  onUpdateMessages: (messages: Message[]) => void;
+  onClose: () => void;
 }
 
 const SUGGESTIONS = [
@@ -35,9 +33,8 @@ const SUGGESTIONS = [
   { text: 'چطور یک همایش موفق برگزار کنم؟', icon: Sparkles },
 ];
 
-export default function AiConsultant({ theme }: AiConsultantProps) {
+export default function AiConsultant({ theme, messages, onUpdateMessages, onClose }: AiConsultantProps) {
   const isLight = theme.startsWith('light-');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('user_gemini_api_key') || '');
@@ -61,31 +58,34 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
 
     const userMessage: Message = { role: 'user', parts: [{ text }] };
     const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    onUpdateMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
     try {
-      const genAI = new GoogleGenAI({ apiKey });
-      
-      const response = await genAI.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [
-          { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
-          ...messages.map(m => ({
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: apiKey.trim(),
+          message: text,
+          history: (messages || []).map(m => ({
             role: m.role,
             parts: [{ text: m.parts[0].text }]
-          })),
-          { role: 'user', parts: [{ text }] }
-        ]
+          }))
+        })
       });
 
-      const responseText = response.text;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-      setMessages([...newMessages, { role: 'model', parts: [{ text: responseText }] }]);
+      const data = await response.json();
+      onUpdateMessages([...newMessages, { role: 'model', parts: [{ text: data.text }] }]);
     } catch (error: any) {
       console.error('Gemini API Error:', error);
-      setMessages([...newMessages, { role: 'model', parts: [{ text: `خطا در ارتباط با هوش مصنوعی: ${error.message || 'لطفاً از صحت کلید API اطمینان حاصل کنید.'}` }] }]);
+      onUpdateMessages([...newMessages, { role: 'model', parts: [{ text: `خطا در ارتباط با هوش مصنوعی: ${error.message || 'لطفاً از صحت کلید API اطمینان حاصل کنید.'}` }] }]);
     } finally {
       setIsLoading(false);
     }
@@ -96,9 +96,10 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
     setShowKeyInput(false);
   };
 
-  const clearChat = () => {
-    if (confirm('آیا از پاک کردن تاریخچه گفتگو اطمینان دارید؟')) {
-      setMessages([]);
+  const startNewChat = () => {
+    if (confirm('آیا از شروع مکالمه جدید و پاک کردن تاریخچه اطمینان دارید؟')) {
+      onUpdateMessages([]);
+      setInput('');
     }
   };
 
@@ -118,6 +119,18 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
 
         <div className="flex items-center gap-2">
           <button 
+            onClick={startNewChat}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-xs font-black ${
+              isLight ? 'bg-white border-slate-200 text-slate-600 hover:text-emerald-500' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-emerald-400'
+            }`}
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>مکالمه جدید</span>
+          </button>
+          
+          <div className="w-px h-8 bg-slate-800/10 mx-1" />
+
+          <button 
             onClick={() => setShowKeyInput(!showKeyInput)}
             className={`p-2.5 rounded-xl border transition-all ${
               showKeyInput ? 'bg-indigo-600 border-indigo-500 text-white' : isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-900 border-slate-800 text-slate-400'
@@ -126,14 +139,15 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
           >
             <Key className="w-5 h-5" />
           </button>
+
           <button 
-            onClick={clearChat}
+            onClick={onClose}
             className={`p-2.5 rounded-xl border transition-all ${
-              isLight ? 'bg-white border-slate-200 text-slate-600 hover:text-rose-500' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-rose-500'
+              isLight ? 'bg-white border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-500' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500'
             }`}
-            title="پاک کردن گفتگو"
+            title="بستن"
           >
-            <Trash2 className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>

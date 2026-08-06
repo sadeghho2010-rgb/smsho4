@@ -129,27 +129,7 @@ export const loadTodos = (username: string): TodoItem[] => {
     console.error('Failed to load todos from localStorage:', error);
   }
   // Default demo todos
-  return [
-    {
-      id: 'todo-1',
-      title: 'تنظیم اهداف سه ماهه توسعه فردی',
-      description: 'تعیین اهداف دقیق برای یادگیری مهارت‌های جدید و سلامت فیزیکی',
-      completed: false,
-      subTasks: [
-        { id: 'sub-1-1', title: 'خواندن ۲ فصل کتاب برنامه‌ریزی', completed: true },
-        { id: 'sub-1-2', title: 'انتخاب دوره آموزش جدید', completed: false }
-      ],
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'todo-2',
-      title: 'مرور هفتگی عادت‌ها و سیرها',
-      description: 'بررسی میزان پایبندی به چالش‌های ۳۰ روزه',
-      completed: true,
-      subTasks: [],
-      createdAt: new Date().toISOString()
-    }
-  ];
+  return [];
 };
 
 export const saveTodos = (todos: TodoItem[], username: string) => {

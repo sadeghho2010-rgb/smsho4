@@ -28,6 +28,7 @@ import {
   GitBranch
 } from 'lucide-react';
 import { Program, AppTheme, AppMode, Challenge, AppTab, TodoItem } from '../types';
+import logo from '../assets/images/logo.jpg';
 import { downloadBackup, parseBackupFile, DecryptedBackup } from '../utils/localStorage';
 
 interface HeaderProps {
@@ -202,9 +203,17 @@ export default function Header({
             <Menu className="w-6 h-6" />
           </button>
           
-          <div className="hidden sm:flex flex-col">
-            <h1 className={`text-lg font-black tracking-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>نقشه راه</h1>
-            <p className={`text-[9px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Strategic Planner</p>
+          <div className="flex items-center gap-3">
+            <img 
+              src={logo} 
+              alt="نقشه راه" 
+              referrerPolicy="no-referrer"
+              className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover border border-slate-800/10" 
+            />
+            <div className="hidden sm:flex flex-col">
+              <h1 className={`text-lg font-black tracking-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>نقشه راه</h1>
+              <p className={`text-[9px] font-bold uppercase tracking-[0.2em] ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Strategic Planner</p>
+            </div>
           </div>
         </div>
         {/* Middle: Conditional Mode Switcher (only for Programs tab) */}

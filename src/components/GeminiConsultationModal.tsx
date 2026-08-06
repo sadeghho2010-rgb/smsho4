@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
-import { GoogleGenAI } from '@google/genai';
 
 export interface GeminiConsultationModalProps {
   isOpen: boolean;
@@ -77,23 +76,26 @@ export default function GeminiConsultationModal({
     setIsLoading(true);
 
     try {
-      const genAI = new GoogleGenAI({ apiKey: userApiKey });
-      
-      const response = await genAI.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [
-          { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
-          ...messages.map(msg => ({
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: userApiKey,
+          message: finalQuery,
+          history: messages.map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.content }]
-          })),
-          { role: 'user', parts: [{ text: finalQuery }] }
-        ]
+          }))
+        })
       });
 
-      const responseText = response.text;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-      setMessages(prev => [...prev, { role: 'ai', content: responseText }]);
+      const data = await response.json();
+      setMessages(prev => [...prev, { role: 'ai', content: data.text }]);
     } catch (err: any) {
       console.error('Gemini API Error:', err);
       setMessages(prev => [...prev, { role: 'ai', content: `خطا در ارتباط با هوش مصنوعی: ${err.message || 'لطفاً کلید API خود را بررسی کنید.'}` }]);
