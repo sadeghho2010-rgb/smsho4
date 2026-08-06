@@ -15,7 +15,7 @@ import {
   Flame,
   Layers
 } from 'lucide-react';
-import { Program, RoadmapPath, RoadmapNode, Challenge, AppTheme, AppMode, AppTab, TodoItem, WeeklyTask, CalendarEvent, Message } from './types';
+import { Program, RoadmapPath, RoadmapNode, Challenge, AppTheme, AppMode, AppTab, TodoItem, WeeklyTask, CalendarEvent } from './types';
 import { loadPrograms, savePrograms, loadChallenges, saveChallenges, loadTodos, saveTodos, loadWeeklyTasks, saveWeeklyTasks, loadEvents, saveEvents, DecryptedBackup } from './utils/localStorage';
 import * as jalaali from 'jalaali-js';
 import { INITIAL_PROGRAMS } from './data/initialData';
@@ -60,7 +60,6 @@ export default function App() {
   const [weeklyTasks, setWeeklyTasks] = useState<WeeklyTask[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [aiMessages, setAiMessages] = useState<Message[]>([]);
 
   // Responsive Sidebar: Closed by default on all screens
   useEffect(() => {
@@ -460,14 +459,7 @@ export default function App() {
           />
         );
       case 'ai-consultant':
-        return (
-          <AiConsultant 
-            theme={theme} 
-            messages={aiMessages}
-            onUpdateMessages={setAiMessages}
-            onClose={() => setActiveTab('daily-todos')}
-          />
-        );
+        return <AiConsultant theme={theme} />;
       default:
         return null;
     }

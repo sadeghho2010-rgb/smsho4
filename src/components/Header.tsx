@@ -28,7 +28,6 @@ import {
   GitBranch
 } from 'lucide-react';
 import { Program, AppTheme, AppMode, Challenge, AppTab, TodoItem } from '../types';
-import logo from '../assets/images/logo.jpg';
 import { downloadBackup, parseBackupFile, DecryptedBackup } from '../utils/localStorage';
 
 interface HeaderProps {
@@ -205,7 +204,7 @@ export default function Header({
           
           <div className="flex items-center gap-3">
             <img 
-              src={logo} 
+              src="/app-logo.jpg" 
               alt="نقشه راه" 
               className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover border border-slate-800/10" 
             />

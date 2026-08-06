@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppTab, AppTheme } from '../types';
-import logo from '../assets/images/logo.jpg';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,7 +30,7 @@ const MENU_ITEMS = [
   { id: 'challenges', label: 'چالش ها', icon: Trophy },
   { id: 'programs', label: 'سیرها و برنامه ها', icon: GitBranch },
   { id: 'events', label: 'مناسبت‌ها', icon: Bell },
-  { id: 'ai-consultant', label: 'مشاوره هوشمند مناسبت ها و مهمانی ها', icon: MessageSquare },
+  { id: 'ai-consultant', label: 'مشاور هوشمند', icon: MessageSquare },
   { id: 'strategic-mind-map', label: 'بارش فکری', icon: Target },
 ];
 
@@ -48,7 +47,7 @@ export default function Sidebar({ isOpen, onClose, activeTab, onSelectTab, theme
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
           />
 
           {/* Sidebar */}
@@ -65,7 +64,7 @@ export default function Sidebar({ isOpen, onClose, activeTab, onSelectTab, theme
             <div className="p-6 flex items-center justify-between border-b border-dashed border-slate-800/20">
               <div className="flex items-center gap-3">
                 <img 
-                  src={logo} 
+                  src="/app-logo.jpg" 
                   alt="Logo" 
                   className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover" 
                 />
