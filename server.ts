@@ -1,17 +1,32 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = 3000;
 
+console.log(`Starting server: NODE_ENV=${process.env.NODE_ENV}, isProd=${isProd}`);
+
 async function startServer() {
   const app = express();
   app.use(express.json());
+
+  // Debug middleware to log requests
+  app.use((req, res, next) => {
+    if (!req.url.includes('node_modules') && !req.url.includes('@vite')) {
+      console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    }
+    next();
+  });
 
   // Gemini Proxy Endpoint
   app.post('/api/gemini', async (req, res) => {
