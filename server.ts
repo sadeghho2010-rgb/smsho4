@@ -17,11 +17,14 @@ async function startServer() {
     res.json({ status: 'ok' });
   });
 
+  console.log(`Starting server in ${isProd ? 'production' : 'development'} mode...`);
+
   // Vite Middleware Setup
   if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
+      root: process.cwd(),
     });
     app.use(vite.middlewares);
   } else {
