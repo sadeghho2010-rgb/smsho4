@@ -48,7 +48,7 @@ export default function App() {
   });
 
   // App Settings
-  const [theme, setTheme] = useState<AppTheme>('cyber-gradient');
+  const [theme, setTheme] = useState<AppTheme>('light-royal');
   const [mode, setMode] = useState<AppMode>('advanced');
   const [activeTab, setActiveTab] = useState<AppTab>('daily-todos');
 
@@ -506,6 +506,13 @@ export default function App() {
         onSelectTab={setActiveTab}
         theme={theme}
       />
+
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[40] lg:hidden animate-in fade-in duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
       {/* Main Content Stage */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">

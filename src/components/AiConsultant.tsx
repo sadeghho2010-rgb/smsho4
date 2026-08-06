@@ -111,7 +111,7 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
             <Bot className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className={`text-xl font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>مشاور هوشمند</h1>
+            <h1 className={`text-xl font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>مشاوره هوشمند مناسبت ها و مهمانی ها</h1>
             <p className="text-xs font-medium text-slate-500">مشورت برای هدیه، برنامه‌ریزی و مناسبت‌ها</p>
           </div>
         </div>
@@ -154,7 +154,7 @@ export default function AiConsultant({ theme }: AiConsultantProps) {
               <h3 className={`text-sm font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>تنظیمات کلید API هوش مصنوعی</h3>
             </div>
             <p className="text-[11px] text-slate-500 mb-4 leading-relaxed">
-              برای استفاده از مشاور هوشمند، می‌توانید کلید اختصاصی خود را وارد کنید. این کلید فقط در مرورگر شما ذخیره می‌شود.
+              برای استفاده از مشاوره هوشمند مناسبت ها و مهمانی ها، می‌توانید کلید اختصاصی خود را وارد کنید. این کلید فقط در مرورگر شما ذخیره می‌شود.
             </p>
             
             <div className="flex gap-3">

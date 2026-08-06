@@ -30,7 +30,7 @@ const MENU_ITEMS = [
   { id: 'challenges', label: 'چالش ها', icon: Trophy },
   { id: 'programs', label: 'سیرها و برنامه ها', icon: GitBranch },
   { id: 'events', label: 'مناسبت‌ها', icon: Bell },
-  { id: 'ai-consultant', label: 'مشاور هوشمند', icon: MessageSquare },
+  { id: 'ai-consultant', label: 'مشاوره هوشمند مناسبت ها و مهمانی ها', icon: MessageSquare },
   { id: 'strategic-mind-map', label: 'بارش فکری', icon: Target },
 ];
 
