@@ -207,7 +207,6 @@ export default function Header({
             <img 
               src={logo} 
               alt="نقشه راه" 
-              referrerPolicy="no-referrer"
               className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover border border-slate-800/10" 
             />
             <div className="hidden sm:flex flex-col">

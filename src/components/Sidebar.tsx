@@ -67,7 +67,6 @@ export default function Sidebar({ isOpen, onClose, activeTab, onSelectTab, theme
                 <img 
                   src={logo} 
                   alt="Logo" 
-                  referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-2xl shadow-lg shadow-indigo-600/20 object-cover" 
                 />
                 <h2 className={`text-lg font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>منوی اصلی</h2>

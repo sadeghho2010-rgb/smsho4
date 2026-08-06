@@ -29,8 +29,6 @@ import WeeklyPlanner from './components/WeeklyPlanner';
 import Events from './components/Events';
 import AiConsultant from './components/AiConsultant';
 
-import StrategicMindMap from './components/StrategicMindMap';
-
 const THEME_CLASSES: Record<AppTheme, string> = {
   'cyber-gradient': 'from-indigo-950 via-slate-900 to-purple-950',
   'forest-zen': 'from-emerald-950 via-zinc-900 to-teal-950',
@@ -445,7 +443,12 @@ export default function App() {
           </div>
         );
       case 'strategic-mind-map':
-        return <StrategicMindMap theme={theme} />;
+        return (
+          <div className={`p-12 text-center rounded-3xl border border-dashed ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+            <h2 className="text-xl font-black mb-4">بارش فکری</h2>
+            <p className="text-sm text-slate-500">این بخش به زودی بازطراحی خواهد شد.</p>
+          </div>
+        );
       case 'events':
         return (
           <Events 

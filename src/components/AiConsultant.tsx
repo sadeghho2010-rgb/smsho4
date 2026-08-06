@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AppTheme, Message } from '../types';
 import Markdown from 'react-markdown';
+import { GoogleGenAI } from '@google/genai';
 
 interface AiConsultantProps {
   theme: AppTheme;
@@ -63,26 +64,23 @@ export default function AiConsultant({ theme, messages, onUpdateMessages, onClos
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey: apiKey.trim(),
-          message: text,
-          history: (messages || []).map(m => ({
+      const genAI = new GoogleGenAI({ apiKey });
+      
+      const response = await genAI.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: "شما یک مشاور حرفه‌ای برای برنامه‌ریزی مناسبت‌ها، خرید هدیه و برگزاری جشن‌ها هستید. پاسخ‌های خود را به زبان فارسی و با لحنی دوستانه و محترمانه ارائه دهید." }] },
+          ...messages.map(m => ({
             role: m.role,
             parts: [{ text: m.parts[0].text }]
-          }))
-        })
+          })),
+          { role: 'user', parts: [{ text }] }
+        ]
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
+      const responseText = response.text;
 
-      const data = await response.json();
-      onUpdateMessages([...newMessages, { role: 'model', parts: [{ text: data.text }] }]);
+      onUpdateMessages([...newMessages, { role: 'model', parts: [{ text: responseText }] }]);
     } catch (error: any) {
       console.error('Gemini API Error:', error);
       onUpdateMessages([...newMessages, { role: 'model', parts: [{ text: `خطا در ارتباط با هوش مصنوعی: ${error.message || 'لطفاً از صحت کلید API اطمینان حاصل کنید.'}` }] }]);
@@ -99,7 +97,6 @@ export default function AiConsultant({ theme, messages, onUpdateMessages, onClos
   const startNewChat = () => {
     if (confirm('آیا از شروع مکالمه جدید و پاک کردن تاریخچه اطمینان دارید؟')) {
       onUpdateMessages([]);
-      setInput('');
     }
   };
 
